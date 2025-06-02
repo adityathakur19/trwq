@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ChevronLeft } from 'lucide-react';
+import { X, ChevronLeft, AlertCircle } from 'lucide-react';
 
 const QualificationModal = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,6 +16,7 @@ const QualificationModal = ({ children }) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const totalSteps = 6;
 
@@ -33,22 +34,92 @@ const QualificationModal = ({ children }) => {
       openToContact: ''
     });
     setShowThankYou(false);
+    setErrors({});
   };
 
   const closeModal = () => {
     setIsOpen(false);
     setShowThankYou(false);
+    setErrors({});
+  };
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhone = (phone) => {
+    const phoneRegex = /^[+]?[\d\s\-()]{10,}$/;
+    return phoneRegex.test(phone.replace(/\s/g, ''));
+  };
+
+  const validateStep = (step) => {
+    const newErrors = {};
+    
+    switch (step) {
+      case 1:
+        if (!formData.businessType) {
+          newErrors.businessType = 'Please select your business type';
+        }
+        break;
+      case 2:
+        if (!formData.yearsInBusiness) {
+          newErrors.yearsInBusiness = 'Please select years in business';
+        }
+        break;
+      case 3:
+        if (!formData.annualRevenue) {
+          newErrors.annualRevenue = 'Please select your annual revenue';
+        }
+        break;
+      case 4:
+        if (!formData.fullName.trim()) {
+          newErrors.fullName = 'Full name is required';
+        } else if (formData.fullName.trim().length < 2) {
+          newErrors.fullName = 'Please enter a valid full name';
+        }
+        
+        if (!formData.phoneNumber.trim()) {
+          newErrors.phoneNumber = 'Phone number is required';
+        } else if (!validatePhone(formData.phoneNumber)) {
+          newErrors.phoneNumber = 'Please enter a valid phone number';
+        }
+        
+        if (!formData.email.trim()) {
+          newErrors.email = 'Email address is required';
+        } else if (!validateEmail(formData.email)) {
+          newErrors.email = 'Please enter a valid email address';
+        }
+        break;
+      case 5:
+        if (!formData.biggestChallenge) {
+          newErrors.biggestChallenge = 'Please select your biggest challenge';
+        }
+        break;
+      case 6:
+        if (!formData.openToContact) {
+          newErrors.openToContact = 'Please make a selection';
+        }
+        break;
+      default:
+        break;
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleNext = () => {
-    if (currentStep < totalSteps) {
+    if (validateStep(currentStep) && currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
+      setErrors({});
     }
   };
 
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+      setErrors({});
     }
   };
 
@@ -57,6 +128,14 @@ const QualificationModal = ({ children }) => {
       ...prev,
       [field]: value
     }));
+    
+    // Clear error for this field when user starts typing/selecting
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
   };
 
   const isCurrentStepValid = () => {
@@ -70,7 +149,9 @@ const QualificationModal = ({ children }) => {
       case 4:
         return formData.fullName.trim() !== '' && 
                formData.phoneNumber.trim() !== '' && 
-               formData.email.trim() !== '';
+               formData.email.trim() !== '' &&
+               validateEmail(formData.email) &&
+               validatePhone(formData.phoneNumber);
       case 5:
         return formData.biggestChallenge !== '';
       case 6:
@@ -81,26 +162,23 @@ const QualificationModal = ({ children }) => {
   };
 
   const isQualified = () => {
-    // Check for the exact disqualifying combination
     const isDisqualified = (
       formData.businessType === 'student' &&
       formData.yearsInBusiness === 'less-than-1' &&
       formData.annualRevenue === '5-10' &&
       formData.openToContact === 'no'
     );
-
     return !isDisqualified;
   };
 
   const handleSubmit = async () => {
-    if (!isCurrentStepValid()) return;
+    if (!validateStep(currentStep)) return;
 
     setIsSubmitting(true);
 
     try {
       const qualified = isQualified();
 
-      // Only submit data to backend if user is qualified
       if (qualified) {
         console.log('Submitting qualified user data:', formData);
         
@@ -119,7 +197,6 @@ const QualificationModal = ({ children }) => {
         
         console.log('Sending submission data:', submissionData);
         
-        // Updated to use Netlify Functions endpoint
         const response = await fetch('/.netlify/functions/submit-qualification', {
           method: 'POST',
           headers: {
@@ -143,7 +220,6 @@ const QualificationModal = ({ children }) => {
         });
       }
 
-      // Show thank you page regardless of qualification status
       setShowThankYou(true);
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -156,19 +232,21 @@ const QualificationModal = ({ children }) => {
   const renderStep = () => {
     if (showThankYou) {
       return (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center py-12">
+          <div className="w-20 h-20 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
             </svg>
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">Thank You!</h3>
-          <p className="text-gray-600 mb-6">
+          <h3 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-6">
+            Thank You!
+          </h3>
+          <p className="text-gray-600 mb-8 text-lg leading-relaxed">
             Thank you for your interest in our clarity call. We'll review your submission and get back to you soon.
           </p>
           <button
             onClick={closeModal}
-            className="bg-pink-500 text-white px-6 py-3 rounded-lg hover:bg-pink-600 transition-colors"
+            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-pink-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 font-semibold text-lg"
           >
             Close
           </button>
@@ -179,92 +257,138 @@ const QualificationModal = ({ children }) => {
     switch (currentStep) {
       case 1:
         return (
-          <div>
-            <h3 className="text-xl font-semibold mb-4 text-center">What best describes you?</h3>
-            <p className="text-gray-600 text-center mb-6">Please select the option that best fits your situation</p>
-            <div className="space-y-3">
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+                What best describes you?
+              </h3>
+              <p className="text-gray-600 text-lg">Please select the option that best fits your situation</p>
+            </div>
+            <div className="space-y-4">
               {[
                 { value: 'coach-consultant', label: "I'm a coach/consultant running my own business" },
                 { value: 'service-based', label: "I run a service-based business" },
                 { value: 'professional', label: "I'm a working professional exploring sales coaching" },
                 { value: 'student', label: "I'm a student/fresher" }
               ].map((option) => (
-                <label key={option.value} className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label key={option.value} className={`flex items-center p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-pink-300 ${
+                  formData.businessType === option.value 
+                    ? 'border-pink-500 bg-gradient-to-r from-pink-50 to-purple-50 shadow-md' 
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}>
                   <input
                     type="radio"
                     name="businessType"
                     value={option.value}
                     checked={formData.businessType === option.value}
                     onChange={(e) => handleInputChange('businessType', e.target.value)}
-                    className="mr-3 text-pink-500"
+                    className="mr-4 w-5 h-5 text-pink-500 focus:ring-pink-500"
                   />
-                  <span className="text-gray-700">{option.label}</span>
+                  <span className="text-gray-700 text-lg font-medium">{option.label}</span>
                 </label>
               ))}
             </div>
+            {errors.businessType && (
+              <div className="flex items-center text-red-500 text-sm mt-2">
+                <AlertCircle size={16} className="mr-2" />
+                {errors.businessType}
+              </div>
+            )}
           </div>
         );
 
       case 2:
         return (
-          <div>
-            <h3 className="text-xl font-semibold mb-6 text-center">How many years have you been running your business?</h3>
-            <div className="space-y-3">
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+                How many years have you been running your business?
+              </h3>
+            </div>
+            <div className="space-y-4">
               {[
                 { value: 'less-than-1', label: 'Less than 1 year' },
                 { value: '1-2', label: '1-2 years' },
                 { value: '2-5', label: '2-5 years' },
                 { value: '5-plus', label: '5+ years' }
               ].map((option) => (
-                <label key={option.value} className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label key={option.value} className={`flex items-center p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-pink-300 ${
+                  formData.yearsInBusiness === option.value 
+                    ? 'border-pink-500 bg-gradient-to-r from-pink-50 to-purple-50 shadow-md' 
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}>
                   <input
                     type="radio"
                     name="yearsInBusiness"
                     value={option.value}
                     checked={formData.yearsInBusiness === option.value}
                     onChange={(e) => handleInputChange('yearsInBusiness', e.target.value)}
-                    className="mr-3 text-pink-500"
+                    className="mr-4 w-5 h-5 text-pink-500 focus:ring-pink-500"
                   />
-                  <span className="text-gray-700">{option.label}</span>
+                  <span className="text-gray-700 text-lg font-medium">{option.label}</span>
                 </label>
               ))}
             </div>
+            {errors.yearsInBusiness && (
+              <div className="flex items-center text-red-500 text-sm mt-2">
+                <AlertCircle size={16} className="mr-2" />
+                {errors.yearsInBusiness}
+              </div>
+            )}
           </div>
         );
 
       case 3:
         return (
-          <div>
-            <h3 className="text-xl font-semibold mb-6 text-center">What is your current annual revenue?</h3>
-            <div className="space-y-3">
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+                What is your current annual revenue?
+              </h3>
+            </div>
+            <div className="space-y-4">
               {[
                 { value: '5-10', label: '₹5-10 lakhs' },
                 { value: '10-25', label: '₹10-25 lakhs' },
                 { value: '25-plus', label: '₹25 lakhs+' }
               ].map((option) => (
-                <label key={option.value} className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label key={option.value} className={`flex items-center p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-pink-300 ${
+                  formData.annualRevenue === option.value 
+                    ? 'border-pink-500 bg-gradient-to-r from-pink-50 to-purple-50 shadow-md' 
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}>
                   <input
                     type="radio"
                     name="annualRevenue"
                     value={option.value}
                     checked={formData.annualRevenue === option.value}
                     onChange={(e) => handleInputChange('annualRevenue', e.target.value)}
-                    className="mr-3 text-pink-500"
+                    className="mr-4 w-5 h-5 text-pink-500 focus:ring-pink-500"
                   />
-                  <span className="text-gray-700">{option.label}</span>
+                  <span className="text-gray-700 text-lg font-medium">{option.label}</span>
                 </label>
               ))}
             </div>
+            {errors.annualRevenue && (
+              <div className="flex items-center text-red-500 text-sm mt-2">
+                <AlertCircle size={16} className="mr-2" />
+                {errors.annualRevenue}
+              </div>
+            )}
           </div>
         );
 
       case 4:
         return (
-          <div>
-            <h3 className="text-xl font-semibold mb-6 text-center">Contact Information</h3>
-            <div className="space-y-4">
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+                Contact Information
+              </h3>
+            </div>
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-lg font-semibold text-gray-700 mb-3">
                   Full Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -272,12 +396,20 @@ const QualificationModal = ({ children }) => {
                   placeholder="Enter your full name"
                   value={formData.fullName}
                   onChange={(e) => handleInputChange('fullName', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                  className={`w-full p-4 border-2 rounded-2xl focus:ring-4 focus:ring-pink-200 focus:border-pink-500 transition-all duration-300 text-lg ${
+                    errors.fullName ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   required
                 />
+                {errors.fullName && (
+                  <div className="flex items-center text-red-500 text-sm mt-2">
+                    <AlertCircle size={16} className="mr-2" />
+                    {errors.fullName}
+                  </div>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-lg font-semibold text-gray-700 mb-3">
                   Phone Number <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -285,12 +417,20 @@ const QualificationModal = ({ children }) => {
                   placeholder="Enter your phone number"
                   value={formData.phoneNumber}
                   onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                  className={`w-full p-4 border-2 rounded-2xl focus:ring-4 focus:ring-pink-200 focus:border-pink-500 transition-all duration-300 text-lg ${
+                    errors.phoneNumber ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   required
                 />
+                {errors.phoneNumber && (
+                  <div className="flex items-center text-red-500 text-sm mt-2">
+                    <AlertCircle size={16} className="mr-2" />
+                    {errors.phoneNumber}
+                  </div>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-lg font-semibold text-gray-700 mb-3">
                   Email Address <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -298,9 +438,17 @@ const QualificationModal = ({ children }) => {
                   placeholder="Enter your email address"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                  className={`w-full p-4 border-2 rounded-2xl focus:ring-4 focus:ring-pink-200 focus:border-pink-500 transition-all duration-300 text-lg ${
+                    errors.email ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   required
                 />
+                {errors.email && (
+                  <div className="flex items-center text-red-500 text-sm mt-2">
+                    <AlertCircle size={16} className="mr-2" />
+                    {errors.email}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -308,9 +456,13 @@ const QualificationModal = ({ children }) => {
 
       case 5:
         return (
-          <div>
-            <h3 className="text-xl font-semibold mb-6 text-center">What's your biggest challenge in growing your business right now?</h3>
-            <div className="space-y-3">
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+                What's your biggest challenge in growing your business right now?
+              </h3>
+            </div>
+            <div className="space-y-4">
               {[
                 { value: 'lead-qualification', label: 'Lead Qualification' },
                 { value: 'lead-nurturing', label: 'Lead Nurturing' },
@@ -318,48 +470,72 @@ const QualificationModal = ({ children }) => {
                 { value: 'sales-closing', label: '1:1 Sales Closing' },
                 { value: 'other', label: 'Other' }
               ].map((option) => (
-                <label key={option.value} className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label key={option.value} className={`flex items-center p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-pink-300 ${
+                  formData.biggestChallenge === option.value 
+                    ? 'border-pink-500 bg-gradient-to-r from-pink-50 to-purple-50 shadow-md' 
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}>
                   <input
                     type="radio"
                     name="biggestChallenge"
                     value={option.value}
                     checked={formData.biggestChallenge === option.value}
                     onChange={(e) => handleInputChange('biggestChallenge', e.target.value)}
-                    className="mr-3 text-pink-500"
+                    className="mr-4 w-5 h-5 text-pink-500 focus:ring-pink-500"
                   />
-                  <span className="text-gray-700">{option.label}</span>
+                  <span className="text-gray-700 text-lg font-medium">{option.label}</span>
                 </label>
               ))}
             </div>
+            {errors.biggestChallenge && (
+              <div className="flex items-center text-red-500 text-sm mt-2">
+                <AlertCircle size={16} className="mr-2" />
+                {errors.biggestChallenge}
+              </div>
+            )}
           </div>
         );
 
       case 6:
         return (
-          <div>
-            <h3 className="text-xl font-semibold mb-4 text-center">Final Step</h3>
-            <p className="text-gray-600 text-center mb-6">
-              If you're a good fit, are you open to being contacted for a free Sales Growth clarity call?
-            </p>
-            <div className="space-y-3">
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+                Final Step
+              </h3>
+              <p className="text-gray-600 text-lg leading-relaxed">
+                If you're a good fit, are you open to being contacted for a free Sales Growth clarity call?
+              </p>
+            </div>
+            <div className="space-y-4">
               {[
                 { value: 'yes', label: "Yes, I'm open to being contacted" },
                 { value: 'no', label: "No, not at this time" }
               ].map((option) => (
-                <label key={option.value} className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label key={option.value} className={`flex items-center p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-pink-300 ${
+                  formData.openToContact === option.value 
+                    ? 'border-pink-500 bg-gradient-to-r from-pink-50 to-purple-50 shadow-md' 
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}>
                   <input
                     type="radio"
                     name="openToContact"
                     value={option.value}
                     checked={formData.openToContact === option.value}
                     onChange={(e) => handleInputChange('openToContact', e.target.value)}
-                    className="mr-3 text-pink-500"
+                    className="mr-4 w-5 h-5 text-pink-500 focus:ring-pink-500"
                   />
-                  <span className="text-gray-700">{option.label}</span>
+                  <span className="text-gray-700 text-lg font-medium">{option.label}</span>
                 </label>
               ))}
             </div>
-            <p className="text-sm text-gray-500 text-center mt-4">
+            {errors.openToContact && (
+              <div className="flex items-center text-red-500 text-sm mt-2">
+                <AlertCircle size={16} className="mr-2" />
+                {errors.openToContact}
+              </div>
+            )}
+            <p className="text-sm text-gray-500 text-center bg-gray-50 p-4 rounded-xl">
               This gives us explicit permission for follow-up regarding your clarity call.
             </p>
           </div>
@@ -372,12 +548,14 @@ const QualificationModal = ({ children }) => {
 
   const renderProgressDots = () => {
     return (
-      <div className="flex justify-center space-x-2 mb-6">
+      <div className="flex justify-center space-x-3 mb-8">
         {[...Array(totalSteps)].map((_, index) => (
           <div
             key={index}
-            className={`w-3 h-3 rounded-full ${
-              index + 1 <= currentStep ? 'bg-pink-500' : 'bg-gray-300'
+            className={`w-4 h-4 rounded-full transition-all duration-300 ${
+              index + 1 <= currentStep 
+                ? 'bg-gradient-to-r from-pink-500 to-purple-600 shadow-lg' 
+                : 'bg-gray-300'
             }`}
           />
         ))}
@@ -394,16 +572,21 @@ const QualificationModal = ({ children }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Book Your Clarity Call</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100"
+           style={{
+             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05), 0 0 100px rgba(236, 72, 153, 0.3)'
+           }}>
+        <div className="p-8 lg:p-10">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              Book Your Clarity Call
+            </h2>
             <button
               onClick={closeModal}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
             >
-              <X size={24} />
+              <X size={28} />
             </button>
           </div>
 
@@ -412,14 +595,14 @@ const QualificationModal = ({ children }) => {
           {renderStep()}
 
           {!showThankYou && (
-            <div className="flex justify-between items-center mt-8">
+            <div className="flex justify-between items-center mt-10">
               <button
                 onClick={handlePrevious}
                 disabled={currentStep === 1}
-                className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
+                className={`flex items-center px-6 py-3 rounded-2xl transition-all duration-300 font-semibold ${
                   currentStep === 1
                     ? 'text-gray-400 cursor-not-allowed'
-                    : 'text-pink-500 hover:bg-pink-50'
+                    : 'text-pink-500 hover:bg-pink-50 hover:shadow-md'
                 }`}
               >
                 <ChevronLeft size={20} className="mr-1" />
@@ -430,9 +613,9 @@ const QualificationModal = ({ children }) => {
                 <button
                   onClick={handleNext}
                   disabled={!isCurrentStepValid()}
-                  className={`px-6 py-2 rounded-lg transition-colors ${
+                  className={`px-8 py-3 rounded-2xl transition-all duration-300 font-semibold text-lg ${
                     isCurrentStepValid()
-                      ? 'bg-pink-500 text-white hover:bg-pink-600'
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:from-pink-600 hover:to-purple-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
@@ -442,9 +625,9 @@ const QualificationModal = ({ children }) => {
                 <button
                   onClick={handleSubmit}
                   disabled={!isCurrentStepValid() || isSubmitting}
-                  className={`px-6 py-2 rounded-lg transition-colors ${
+                  className={`px-8 py-3 rounded-2xl transition-all duration-300 font-semibold text-lg ${
                     isCurrentStepValid() && !isSubmitting
-                      ? 'bg-pink-500 text-white hover:bg-pink-600'
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:from-pink-600 hover:to-purple-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
