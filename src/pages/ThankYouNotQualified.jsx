@@ -35,9 +35,6 @@ const ThankYouNotQualified = ({ onClose }) => {
             </li>
           </ul>
         </div>
-        <p className="text-gray-600 mt-4 text-sm">
-          We focus on helping established businesses with higher revenue achieve their sales growth goals.
-        </p>
       </div>
       <button
         onClick={onClose}
