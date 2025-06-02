@@ -203,8 +203,7 @@ const QualificationModal = ({ children }) => {
         
         console.log('Sending submission data:', submissionData);
         
-        // Uncomment when ready to integrate with backend
-        /*
+        
         const response = await fetch('/.netlify/functions/submit-qualification', {
           method: 'POST',
           headers: {
@@ -219,7 +218,7 @@ const QualificationModal = ({ children }) => {
 
         const result = await response.json();
         console.log('Form submitted successfully:', result);
-        */
+        
       } else {
         console.log('User not qualified - data not saved:', {
           businessType: formData.businessType,
