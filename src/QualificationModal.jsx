@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { X, ChevronLeft, AlertCircle } from 'lucide-react';
+import ThankYouQualified from './pages/ThankYouQualified';
+import ThankYouNotQualified from './pages/ThankYouNotQualified';
 
 const QualificationModal = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,6 +18,7 @@ const QualificationModal = ({ children }) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
+  const [isQualifiedUser, setIsQualifiedUser] = useState(true);
   const [errors, setErrors] = useState({});
 
   const totalSteps = 6;
@@ -34,12 +37,14 @@ const QualificationModal = ({ children }) => {
       openToContact: ''
     });
     setShowThankYou(false);
+    setIsQualifiedUser(true);
     setErrors({});
   };
 
   const closeModal = () => {
     setIsOpen(false);
     setShowThankYou(false);
+    setIsQualifiedUser(true);
     setErrors({});
   };
 
@@ -178,6 +183,7 @@ const QualificationModal = ({ children }) => {
 
     try {
       const qualified = isQualified();
+      setIsQualifiedUser(qualified);
 
       if (qualified) {
         console.log('Submitting qualified user data:', formData);
@@ -197,6 +203,8 @@ const QualificationModal = ({ children }) => {
         
         console.log('Sending submission data:', submissionData);
         
+        // Uncomment when ready to integrate with backend
+        /*
         const response = await fetch('/.netlify/functions/submit-qualification', {
           method: 'POST',
           headers: {
@@ -211,6 +219,7 @@ const QualificationModal = ({ children }) => {
 
         const result = await response.json();
         console.log('Form submitted successfully:', result);
+        */
       } else {
         console.log('User not qualified - data not saved:', {
           businessType: formData.businessType,
@@ -231,27 +240,9 @@ const QualificationModal = ({ children }) => {
 
   const renderStep = () => {
     if (showThankYou) {
-      return (
-        <div className="text-center py-12">
-          <div className="w-20 h-20 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-          <h3 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-6">
-            Thank You!
-          </h3>
-          <p className="text-gray-600 mb-8 text-lg leading-relaxed">
-            Thank you for your interest in our clarity call. We'll review your submission and get back to you soon.
-          </p>
-          <button
-            onClick={closeModal}
-            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-pink-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 font-semibold text-lg"
-          >
-            Close
-          </button>
-        </div>
-      );
+      return isQualifiedUser ? 
+        <ThankYouQualified onClose={closeModal} /> : 
+        <ThankYouNotQualified onClose={closeModal} />;
     }
 
     switch (currentStep) {
@@ -594,7 +585,8 @@ const QualificationModal = ({ children }) => {
 
           {renderStep()}
 
-          {!showThankYou && (
+          {!showThankYou &&
+          (
             <div className="flex justify-between items-center mt-10">
               <button
                 onClick={handlePrevious}
