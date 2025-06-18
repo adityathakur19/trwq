@@ -1,3 +1,4 @@
+//main-components
 import QualificationModal from "../QualificationModal"
 import FAQAccordion from "../pages/FAQAccordion"
 import Img from "../assets/Taibapic.png"
