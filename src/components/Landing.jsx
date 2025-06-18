@@ -7,6 +7,7 @@ import p3 from "../assets/p3.png"
 import p4 from "../assets/p4.png"
 import TestimonialsSection from "./testimonialVideos"
 import TestimonialCarousel from "./testimonialCarousel"
+// import other page
 
 export default function Landing() {
   return (
